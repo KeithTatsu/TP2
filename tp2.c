@@ -8,7 +8,8 @@
 #include "strutil.h"
 #include "cola.h"
 #include "heap.h"
-//#include "lista.h"
+#include "lista.h"
+#include "hash.h"
 
 #define TIME_FORMAT "%FT%T%z"
 #define ORDENAR_ARCHIVO "ordenar_archivo"
