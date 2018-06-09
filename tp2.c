@@ -15,6 +15,8 @@
 #define AGREGAR_ARCHIVO "agregar_archivo"
 #define VER_VISITANTES "ver_visitantes"
 #define ERROR_EN_COMANDO "Error en comando"
+#define MAX_CAN_REGISTRO 20
+
 
 time_t iso8601_to_time(const char* iso8601){
 
@@ -45,6 +47,24 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado){
 
 	if(!archivo_desordenado) return imprimir_error(nombre_archivo);
 
+	char* linea = NULL;
+	size_t cant = 0;
+	ssize_t leidos;
+
+	size_t cant_linea = 0 ;
+	size_t cant_particiones = 1;
+
+	FILE* archivo_particionado = fopen(,"w");
+	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
+		
+		if (cant_linea > MAX_CAN_REGISTRO){
+			nombre_archivo = // Aca seria cuando conquetamos  y no se como pasar de int a char
+			fclose(archivo_particionado);
+			archivo_particionado = fopen(nombre_archivo, "w");
+		}
+		fputs(linea,archivo_particionado);
+	}
+
 	//SE ORDENA EL ARCHIVO
 
 	fclose(archivo_desordenado);
@@ -67,7 +87,6 @@ bool ver_visitantes(char* nombre_archivo, char* desde, char* hasta){
 
 	return true;
 }
-
 bool comparar_comando(char** comando){
 
 	if(strcmp(comando[0], ORDENAR_ARCHIVO) == 0){
