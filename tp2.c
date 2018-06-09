@@ -6,7 +6,6 @@
 #include <time.h>
 #include <stdbool.h>
 #include "strutil.h"
-#include "cola.h"
 #include "heap.h"
 #include "lista.h"
 #include "hash.h"
