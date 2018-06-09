@@ -5,123 +5,113 @@
 #include <stdlib.h>
 
 /* ******************************************************************
- *                DEFINICION DE LOS TIPOS DE DATOS
+ *                DEFINICION DE LOS TIPOS DE ESTRUCTURA
  * *****************************************************************/
+
+/* La Lista está planteada como una lista de punteros genéricos. */
 
 struct lista;
 typedef struct lista lista_t;
+
+struct lista_iter; 
+typedef struct lista_iter lista_iter_t;
 
 /* ******************************************************************
  *                    PRIMITIVAS DE LA LISTA
  * *****************************************************************/
 
-//Crea una lista.
-//Pos: Devuelve una lista vacía.
-lista_t *lista_crear(void);
+// Crea una Lista.
+// Post: devuelve una nueva Lista vacía.
+lista_t* lista_crear(void);
 
-//Devuelve true si la lista está vacía, false en caso contrario.
-//Pre: La lista fue creada.
-bool lista_esta_vacia(const lista_t *lista);
+// Destruye la lista. Si se recibe la función destruir_dato por parámetro,
+// para cada uno de los elementos de la Lista llama a destruir_dato.
+// Pre: la cola fue creada. destruir_dato es una función capaz de destruir
+// los datos de la lista, o NULL en caso de que no se la utilice.
+// Post: se eliminaron todos los elementos de la lista.
+void lista_destruir (lista_t* lista, void destruir_dato(void *));
 
-//Inserta un elemento en la primera posición de la lista, devuelve true
-//si se pudo insertar, false en caso de algún error.
-//Pre: La lista fue creada.
-//Pos: Se insertó un nuevo elemento en la primera posición.
-bool lista_insertar_primero(lista_t *lista, void *dato);
 
-//Inserta un elemento en la última posición de la lista, devuelve true
-//si se pudo insertar, false en caso de algún error.
-//Pre: La lista fue creada.
-//Pos: Se insertó un nuevo elemento en la última posición.
-bool lista_insertar_ultimo(lista_t *lista, void *dato);
+// Devuelve verdadero o falso, según si la lista tiene o no elementos enlistados.
+// Pre: la cola fue creada.
+bool lista_esta_vacia(const lista_t* lista);
 
-//Elimina el primer elemento de la lista y devuelve su valor, si está
-//vacía devuelve NULL.
-//Pre: Lista fue creada.
-//Pos: Devuelve el valor del elemento borrado en caso de que la lista
-//no esté vacía.
-void *lista_borrar_primero(lista_t *lista);
+// Agrega un nuevo elemento a la lista en la posicion primero. 
+// Devuelve falso en caso de error.
+// Pre: la lista fue creada.
+// Post: se agregó un nuevo elemento a la lista, valor se encuentra al inicio
+// de la lista.
+bool lista_insertar_primero(lista_t* lista, void* dato);
 
-//Obtiene el valor del primer elemento. Si la lista no tiene elementos
-//se devuelve NULL.
-//Pre: Lista fue creada.
-//Pos: Se devolvió el primer elemento de la lista, si no está vacía.
-void *lista_ver_primero(const lista_t *lista);
+// Agrega un nuevo elemento a la lista en la posicion ultima. 
+// Devuelve falso en caso de error.
+// Pre: la lista fue creada.
+// Post: se agregó un nuevo elemento a la lista, valor se encuentra al ultimo
+// de la lista.
+bool lista_insertar_ultimo(lista_t* lista, void* dato);
 
-//Obtiene el valor del último elemento. Si la lista no tiene elementos
-//se devuelve NULL.
-//Pre: Lista fue creada.
-//Pos: Se devolvió el último elemento de la lista, si no está vacía.
-void *lista_ver_ultimo(const lista_t* lista);
+// Obtiene el valor del primer elemento de la lista. Si la lista tiene
+// elementos, se devuelve el valor del primero, si está vacía devuelve NULL.
+// Pre: la lista fue creada.
+// Post: se devolvió el primer elemento de la lista, cuando no está vacía.
+void* lista_ver_primero(const lista_t* lista);
 
-//Obtiene el valor del largo de la lista.
-//Pre: Lista fue creada.
-size_t lista_largo(const lista_t *lista);
+// Obtiene el valor del ultimo elemento de la lista. Si la lista tiene
+// elementos, se devuelve el valor del elemento, si está vacía devuelve NULL.
+// Pre: la lista fue creada.
+// Post: se devolvió el ultimo elemento de la lista, cuando no está vacía.
+void* lista_ver_ultimo(const lista_t* lista);
 
-//Se destruye la lista. Si se recibe la función destruir_dato por
-//parámetro, para cada uno de los elementos de la lista llama a
-//destruir_dato.
-//Pre: Lista fue creada. destuir_dato es una función capaz de destruir
-//los datos de la lista, o NULL en caso de que no se la necesite.
-//Pos: Se eliminaron todos los elementos de la lista.
-void lista_destruir(lista_t *lista, void destruir_dato(void *));
+// Saca el primer elemento de la lista. Si la lista tiene elementos, se quita el
+// primero de la lista, y se devuelve su valor, si está vacía, devuelve NULL.
+// Pre: la lista fue creada.
+// Post: se devolvió el valor del primer elemento anterior, la lista
+// contiene un elemento menos, si la lista no estaba vacía.
+void* lista_borrar_primero(lista_t* lista);
 
-/* ******************************************************************
- *                    PRIMITIVA DEL ITERADOR INTERNO
- * *****************************************************************/
-
-//Se aplica la función visitar a los elementos de la lista.
-//Pre: Lista creada.
-//Pos: Se aplicó 'visitar()' a los elementos de la lista.
-void lista_iterar(lista_t *lista, bool visitar(void *dato, void *extra), void *extra);
+//Obtiene el largo de la lista
+// Pre: la lista fue creada.
+// Post: se devolvió el laargo la lista
+size_t lista_largo(const lista_t* lista);
 
 /* ******************************************************************
- *                    PRIMITIVAS DEL ITERADOR EXTERNO
+ *                    PRIMITIVAS DE LA ITERADORES EXTERNO
  * *****************************************************************/
+// Crea un Iterador externo.
+//Pre:Existe una lista
+// Post: devuelve una nueva Lista vacía.
+lista_iter_t* lista_iter_crear(lista_t *lista);
+//Pre: Iterador creado
+//Post:Avanza el iterador al siguiente elemento del TDA
+bool lista_iter_avanzar(lista_iter_t* iter);
+//Pre:Iterador Creado y lista existente
+//Post: Muestra el valor del elemento en el Iterador se encuentra
+void* lista_iter_ver_actual(const lista_iter_t *iter);
 
-struct lista_iter;
-typedef struct lista_iter lista_iter_t;
-
-//Crea un iterador de la lista.
-//Pos: Devuelve un iterador.
-lista_iter_t *lista_iter_crear(lista_t *lista);
-
-//Avanza una posición en la lista, devuelve true si avanza a una posición válida,
-//false en caso de algún error.
-//Pre: Lista e iterador fueron creados.
-//Pos: Avanzó una posición en la lista, false en caso de algún error.
-bool lista_iter_avanzar(lista_iter_t *iter);
-
-//Devuelve el valor del elemento actual si la lista no está vacía y el iterador no
-//está al final.
-//Pre: Lista e iterador creados.
-//Pos: Devuelve el valor del elemento actual, NULL en caso de algún error.
-void *lista_iter_ver_actual(const lista_iter_t *iter);
-
-//Devuelve true o false depenediendo de si está al final o no.
-//Pre: Lista e iterador creados.
-//Pos: Devuelve true si llegó al final, false en caso contrario.
+//Pre:Iterador Creado
+//Post:Indica si te encuentras en el final del TDA
 bool lista_iter_al_final(const lista_iter_t *iter);
-
-//Destruye el iterador.
-//Pre: Iterador fue creado.
-//Pos: Iterador destruido.
+//Pre:Iterador Creado y lista existente
+//Post:Destruye elIterador
 void lista_iter_destruir(lista_iter_t *iter);
-
-//Inserta un nuevo elemento en la posición actual, devuelve false en caso de error.
-//Pre: Lista e iterador creados.
-//Pos: Devuelve true si pudo insertar el elemento satisfactoriamente, false en caso de algún error.
+//Pre:Iterador Creado y lista existente
+//Post:Insertar un elelemento a TDA, actualizando la ubicacion 
 bool lista_iter_insertar(lista_iter_t *iter, void *dato);
-
-//Borra el elemento en la posición actual y se devuelve su valor. Devuelve NULL en caso
-//de que la lista esté vacía.
-//Pre: Lista e iterador creados.
-//Pos: Devuelve el valor del elemento borrado, si la lista está vacía devuelve NULL.
+//Pre: Iterador creado y lista existente
+//Post:Borrar elelemento de TDA
 void *lista_iter_borrar(lista_iter_t *iter);
-
+/* ******************************************************************
+ *                    PRIMITIVAS DE LA ITERADORES INTERNO
+ * *****************************************************************/
+void lista_iterar(lista_t *lista, bool visitar(void *dato, void *extra), void *extra);
 /* *****************************************************************
  *                      PRUEBAS UNITARIAS
  * *****************************************************************/
-void pruebas_lista_alumno(void);
 
-#endif // LISTA_H
+// Realiza pruebas sobre la implementación del alumno.
+//
+// Las pruebas deben emplazarse en el archivo ‘pruebas_alumno.c’, y
+// solamente pueden emplear la interfaz pública tal y como aparece en lista.h
+void pruebas_lista_alumno(void); // En el original esto esta en main fijate si el corrector lo lee
+
+#endif
