@@ -15,8 +15,14 @@
 #define AGREGAR_ARCHIVO "agregar_archivo"
 #define VER_VISITANTES "ver_visitantes"
 #define ERROR_EN_COMANDO "Error en comando"
-#define MAX_CAN_REGISTRO 20
+#define MAX_CANT_REGISTRO 20
 
+typedef struct logs{
+	char* ip;
+	time_t tiempo;
+	char* metodo;
+	char* url;
+}logs_t; //NOMBRE SUJETO A CAMBIO
 
 time_t iso8601_to_time(const char* iso8601){
 
@@ -24,6 +30,33 @@ time_t iso8601_to_time(const char* iso8601){
 	strptime(iso8601, TIME_FORMAT, &bktime);
 
 	return mktime(&bktime);
+}
+
+int comparar_ip(const char** IP1, const char** IP2, size_t pos){
+
+	if(pos == 4) return 0;
+
+	size_t len_ip1 = strlen(IP1[pos]);
+	size_t len_ip2 = strlen(IP2[pos]);
+
+	if(len_ip1 == len_ip2){
+		if(strcmp(IP1[pos], IP2[pos]) == 0){
+			return comparar_ip(IP1, IP2, pos+1);
+		}
+		return strcmp(IP1[pos], IP2[pos]);
+	}
+
+	if(len_ip1 < len_ip2) return -1;
+
+	return 1;
+}
+
+int ip_cmp(const char* ip1, const char* ip2){
+
+	const char** IP1 = split(ip1, '.');
+	const char** IP2 = split(ip2, '.');
+
+	return comparar_ip(IP1, IP2, 0);
 }
 
 bool imprimir_error(char* comando){
@@ -41,31 +74,27 @@ char* _clave_copiar(const char* clave){
 	return clave_aux;
 }
 
-bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado){
+bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t tam_limite){
 
 	FILE* archivo_desordenado = fopen(nombre_archivo, "r");
 
 	if(!archivo_desordenado) return imprimir_error(nombre_archivo);
 
 	char* linea = NULL;
-	size_t cant = 0;
+	size_t cant = 0, cant_linea = 0, cant_particiones = 1;
 	ssize_t leidos;
-
-	size_t cant_linea = 0 ;
-	size_t cant_particiones = 1;
+	heap_t* heap_ordenar = heap_crear();
 
 	FILE* archivo_particionado = fopen(,"w");
 	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
 		
-		if (cant_linea > MAX_CAN_REGISTRO){
-			nombre_archivo = // Aca seria cuando conquetamos  y no se como pasar de int a char
+		if (cant_linea > MAX_CANT_REGISTRO){
+			nombre_archivo = // Aca seria cuando concatenamos  y no se como pasar de int a char
 			fclose(archivo_particionado);
 			archivo_particionado = fopen(nombre_archivo, "w");
 		}
 		fputs(linea,archivo_particionado);
 	}
-
-	//SE ORDENA EL ARCHIVO
 
 	fclose(archivo_desordenado);
 
@@ -87,12 +116,12 @@ bool ver_visitantes(char* nombre_archivo, char* desde, char* hasta){
 
 	return true;
 }
-bool comparar_comando(char** comando){
+bool comparar_comando(char** comando, int tam_limite){
 
 	if(strcmp(comando[0], ORDENAR_ARCHIVO) == 0){
 		if(!comando[2] || !comando[1]) return imprimir_error(comando[0]);
 		else{
-			if(ordenar_archivo(comando[1], comando[2])){
+			if(ordenar_archivo(comando[1], comando[2], tam_limite)){
 				fprintf(stdout, "%s\n", "OK");
 				return true;
 			}
@@ -118,18 +147,19 @@ bool comparar_comando(char** comando){
 	return imprimir_error(comando[0]);
 }
 
-void interfaz(){
+void interfaz(int tam_limite){
 
 	char* linea = NULL;
 	size_t cant = 0;
 	ssize_t leidos;
-//	cola_t* cola_comandos = cola_crear();
+	abb_t* abb_visitantes = abb_crear(ip_cmp, NULL);
+
 	while((leidos = getline(&linea, &cant, stdin) > 0)){
 
 		linea[cant-1] = '\0';
 		char** comando = split(linea, ' ');
 		if(comando[0]){
-			if(!comparar_comando(comando)){
+			if(!comparar_comando(comando, tam_limite)){
 				free(linea);
 				free_strv(comando);
 				return;
@@ -145,9 +175,20 @@ void interfaz(){
 	free(linea);
 }
 
-int main(){
-	
-	interfaz();
+int main(char* argv[], int agrc){
+
+	if(argc < 2){
+		fprintf(stderr, "",); //CONSULTAR
+		return -1;
+	}
+
+	int tam_limite = atoi(argv[1]);
+
+	if(tam_limite == 0){
+		//IGUAL A AGRC < 2
+	}
+
+	interfaz(tam_limite);
 
 	return 0;
 }
