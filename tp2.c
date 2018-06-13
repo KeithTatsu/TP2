@@ -9,6 +9,7 @@
 #include "heap.h"
 #include "lista.h"
 #include "hash.h"
+#include "abb.h"
 
 #define TIME_FORMAT "%FT%T%z"
 #define ORDENAR_ARCHIVO "ordenar_archivo"
@@ -32,7 +33,7 @@ time_t iso8601_to_time(const char* iso8601){
 	return mktime(&bktime);
 }
 
-int comparar_ip(const char** IP1, const char** IP2, size_t pos){
+int comparar_ip(char** IP1, char** IP2, size_t pos){
 
 	if(pos == 4) return 0;
 
@@ -53,8 +54,8 @@ int comparar_ip(const char** IP1, const char** IP2, size_t pos){
 
 int ip_cmp(const char* ip1, const char* ip2){
 
-	const char** IP1 = split(ip1, '.');
-	const char** IP2 = split(ip2, '.');
+	char** IP1 = split(ip1, '.');
+	char** IP2 = split(ip2, '.');
 
 	return comparar_ip(IP1, IP2, 0);
 }
@@ -66,14 +67,6 @@ bool imprimir_error(char* comando){
 	return false;
 }
 
-char* _clave_copiar(const char* clave){
-	
-	char* clave_aux = malloc((strlen(clave)+1)*sizeof(char));
-	if(!clave_aux) return NULL;
-	strcpy(clave_aux, clave);
-	return clave_aux;
-}
-
 bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t tam_limite){
 
 	FILE* archivo_desordenado = fopen(nombre_archivo, "r");
@@ -83,8 +76,8 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t 
 	char* linea = NULL;
 	size_t cant = 0, cant_linea = 0, cant_particiones = 1;
 	ssize_t leidos;
-	heap_t* heap_ordenar = heap_crear();
-
+	heap_t* heap_ordenar = heap_crear(ip_cmp);
+/*
 	FILE* archivo_particionado = fopen(,"w");
 	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
 		
@@ -95,7 +88,7 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t 
 		}
 		fputs(linea,archivo_particionado);
 	}
-
+*/
 	fclose(archivo_desordenado);
 
 	return true;
@@ -103,20 +96,32 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t 
 
 bool agregar_archivo(char* nombre_archivo){
 
-	return true;
-}
-
-bool ver_visitantes(char* nombre_archivo, char* desde, char* hasta){
-
-	FILE* archivo_visitas = fopen(nombre_archivo, "r");
-
-	if(!archivo_visitas) return imprimir_error(nombre_archivo);
-
-	fclose(archivo_visitas);
+	//hash y lista
 
 	return true;
 }
-bool comparar_comando(char** comando, int tam_limite){
+
+bool imprimir_visitantes(const char* clave, char* desde, char* hasta){
+
+	int desde_clave = ip_cmp(desde, clave);
+	int hasta_clave = ip_cmp(hasta, clave);
+
+	if(desde_clave <= 0 && hasta_clave >= 0){
+		fprintf(stdout, "\t%s\n", clave);
+		return true;
+	}
+	if(desde_clave > 0) return true;
+
+	return false;
+}
+
+bool ver_visitantes(char* desde, char* hasta, abb_t* visitantes){
+
+	abb_in_order(visitantes, imprimir_visitantes, desde, hasta);
+
+	return true;
+}
+bool comparar_comando(char** comando, int tam_limite, abb_t* visitantes){
 
 	if(strcmp(comando[0], ORDENAR_ARCHIVO) == 0){
 		if(!comando[2] || !comando[1]) return imprimir_error(comando[0]);
@@ -135,9 +140,9 @@ bool comparar_comando(char** comando, int tam_limite){
 			}
 		}
 	}else if(strcmp(comando[0], VER_VISITANTES) == 0){
-		if(!comando[1] || !comando[2] || !comando[3]) return imprimir_error(comando[0]);
+		if(!comando[1] || !comando[2]) return imprimir_error(comando[0]);
 		else{
-			if(ver_visitantes(comando[1], comando[2], comando[3])){
+			if(ver_visitantes(comando[1], comando[2], visitantes)){
 				fprintf(stdout, "%s\n", "OK");
 				return true;
 			}
@@ -152,14 +157,16 @@ void interfaz(int tam_limite){
 	char* linea = NULL;
 	size_t cant = 0;
 	ssize_t leidos;
-	abb_t* abb_visitantes = abb_crear(ip_cmp, NULL);
+	abb_t* visitantes = abb_crear(ip_cmp, NULL);
+
+	if(!visitantes) return;
 
 	while((leidos = getline(&linea, &cant, stdin) > 0)){
 
 		linea[cant-1] = '\0';
 		char** comando = split(linea, ' ');
 		if(comando[0]){
-			if(!comparar_comando(comando, tam_limite)){
+			if(!comparar_comando(comando, tam_limite, visitantes)){
 				free(linea);
 				free_strv(comando);
 				return;
@@ -175,7 +182,7 @@ void interfaz(int tam_limite){
 	free(linea);
 }
 
-int main(char* argv[], int agrc){
+int main(int argc, char* argv[]){
 
 	if(argc < 2){
 		fprintf(stderr, "",); //CONSULTAR

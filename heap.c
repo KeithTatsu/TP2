@@ -1,5 +1,5 @@
 #include "heap.h"
-#include <stdlib.h> //por el sizeof
+#include <stdlib.h>
 
 #define POSICION_DEL_MAX 0
 #define CANTIDAD_INICIAL 0
@@ -7,10 +7,6 @@
 #define REDIMENSIONADOR 2
 #define TAMANIO_RELATIVO 4
 
-//hujo izquierdo = 2*pos+1
-//hijo derecho = 2*pos+2
-//padre = (pos -1 )/2
-// ult padre = (largo/2)-1
 struct heap{
 	void** datos;
 	cmp_func_t cmp;
@@ -32,7 +28,7 @@ void _upheap(void *datos[], size_t pos, cmp_func_t cmp){
 	_swap(datos, padre, pos);
 	_upheap(datos,padre,cmp);
 }
-void _downheap(void *datos[],size_t n ,size_t pos ,cmp_func_t cmp){// n creo es donde termina el arreglo
+void _downheap(void *datos[],size_t n ,size_t pos ,cmp_func_t cmp){
 	if(pos >= n) return;
 	size_t  pos_hijo_izq = 2*pos+1;
 	size_t  pos_hijo_der = 2*pos+2;
@@ -131,16 +127,18 @@ void heap_destruir(heap_t *heap, void destruir_elemento(void *e)){
 	free(heap->datos);
     free(heap);
 }
+void heapify(void* elementos[], size_t cant, cmp_func_t cmp){
+
+	for(size_t i = cant; i > 0; i--){
+		_downheap(elementos, cant, i-1, cmp);
+	}
+}
 void heap_sort(void *elementos[], size_t cant, cmp_func_t cmp){
 
-	heap_t* heap = heap_crear_arr(elementos,cant,cmp);
-	size_t pos_act = cant-1; 
-	while(!heap_esta_vacio(heap)){//Le pregunte a martin y dice que esta funcion debe ordenar de menor a mayor respecto de lo que cmp 
-		void* elem = heap_desencolar(heap);// mayor y menor
-		elementos[pos_act] = elem;
-		--pos_act;
+	heapify(elementos, cant, cmp);
+
+	for(size_t i = cant; i > 0; i--){
+		_downheap(elementos, i, 0, cmp);
+		_swap(elementos, 0, i-1);
 	}
-	heap_destruir(heap,NULL);
 }
-
-
