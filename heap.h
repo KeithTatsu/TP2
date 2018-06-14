@@ -7,12 +7,12 @@
 /* Prototipo de función de comparación que se le pasa como parámetro a las
  * diversas funciones del heap.
  * Debe recibir dos punteros del tipo de dato utilizado en el heap, y
- * debe devolver:
- *   menor a 0  si  a < b
- *       0      si  a == b
- *   mayor a 0  si  a > b
+ * debe devolver:	MAX   | MIN
+ *   menor a 0  si  a < b | a > b
+ *       0      si  a == b| a == b
+ *   mayor a 0  si  a > b | a < b
  */
-typedef int (*cmp_func_t) (const char* a, const char* b);
+typedef int (*cmp_func_t) (const char** a, const char** b);
 
 
 /* Función de heapsort genérica. Esta función ordena mediante heap_sort

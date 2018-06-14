@@ -29,7 +29,7 @@ lista_t* lista_crear(void);
 // Pre: la cola fue creada. destruir_dato es una función capaz de destruir
 // los datos de la lista, o NULL en caso de que no se la utilice.
 // Post: se eliminaron todos los elementos de la lista.
-void lista_destruir (lista_t* lista, void destruir_dato(void *));
+void lista_destruir(lista_t* lista, void destruir_dato(void *));
 
 
 // Devuelve verdadero o falso, según si la lista tiene o no elementos enlistados.

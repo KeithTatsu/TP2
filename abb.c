@@ -294,9 +294,9 @@ bool _abb_in_order(abb_nodo_t* nodo, bool visitar(const char *, char*, char*), c
 
 	if(!nodo) return true;
 
-	if(!_abb_in_order(nodo->izquierdo, visitar, extra)) return false;
-	if(!visitar(nodo->campo->clave, nodo->campo->dato, extra)) return false;
-	if(!_abb_in_order(nodo->derecho, visitar, extra)) return false;
+	if(!_abb_in_order(nodo->izquierdo, visitar, desde, hasta)) return false;
+	if(!visitar(nodo->campo->clave, desde, hasta)) return false;
+	if(!_abb_in_order(nodo->derecho, visitar, desde, hasta)) return false;
 
 	return true;
 }

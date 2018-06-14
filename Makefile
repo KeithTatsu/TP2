@@ -2,8 +2,8 @@ CC = gcc
 CFLAGS = -g -std=c99 -Wall -Wconversion -Wno-sign-conversion -Wtype-limits -pedantic
 EXEC = pruebas
 
-compile: tp2.c heap.c heap.h strutil.c strutil.h lista.c lista.h hash.c hash.h
-	$(CC) $(CFLAGS) tp2.c heap.c strutil.c lista.c hash.c -o $(EXEC)
+compile: tp2.c heap.c heap.h strutil.c strutil.h lista.c lista.h hash.c hash.h abb.c abb.h pila.c pila.h
+	$(CC) $(CFLAGS) tp2.c heap.c strutil.c lista.c hash.c abb.c pila.c -o $(EXEC)
 
 run: compile
 	./$(EXEC)
