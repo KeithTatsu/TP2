@@ -17,6 +17,7 @@
 #define VER_VISITANTES "ver_visitantes"
 #define ERROR_EN_COMANDO "Error en comando"
 #define CANT_MAX_LOGS 30
+#define POSIBLE_DOS 5
 /*
 typedef struct logs{
 	char* ip;
@@ -87,21 +88,25 @@ int ip_cmp(const char* IP1, const char* IP2){
 
 	return comparar_ip(ip1, ip2, 0);
 }
+int ip_cmp2(char** IP1, char** IP2){
 
-int tiempo_cmp(const char** TIEMPO1, const char** TIEMPO2){
+	return ip_cmp(IP1[0], IP2[0]);
+}
 
-	time_t tiempo1 = iso8601_to_time(TIEMPO1[1]);
-	time_t tiempo2 = iso8601_to_time(TIEMPO2[1]);
+int tiempo_cmp(char** LINEA1, char** LINEA2){
+
+	time_t tiempo1 = iso8601_to_time(LINEA1[1]);
+	time_t tiempo2 = iso8601_to_time(LINEA2[1]);
 
 	int diferencia = (int)difftime(tiempo1, tiempo2);
 
-//	if(diferencia != 0) diferencia = diferencia*(-1);
+//	if(diferencia != 0) diferencia = diferencia*(-1);	DEJAR ESTA LINEA por las dudas
 
 	if(diferencia == 0){
-		diferencia = ip_cmp(TIEMPO1[0], TIEMPO2[0]);
+		diferencia = ip_cmp(LINEA1[0], LINEA2[0]);
 
 		if(diferencia == 0){
-			diferencia = strcmp(TIEMPO1[3], TIEMPO2[3]);
+			diferencia = strcmp(LINEA1[3], LINEA2[3]);
 		}
 	}
 	
@@ -113,50 +118,16 @@ bool imprimir_error(char* comando){
 	fprintf(stderr, "%s %s\n", ERROR_EN_COMANDO, comando);
 
 	return false;
-}/*
-FILE* _ordenar_particio(heap_t* heap,lista_t* lista,){
-
 }
-FILE* ordenar_particion(FILE* archivo_particionado, size_t particion){
 
-	heap_t* heap_ordenar = heap_crear(tiempo_cmp);
-	if (!heap_ordenar) return false;
-	lista_t* lista = lista_crear();
-	if(!lista){
-		free(heap_ordenar);
-		return false;
+void pasar_lista_a_heap(lista_t* lista_logs, heap_t* heap_logs){
+
+	while(!lista_esta_vacia(lista_logs)){
+		char** log = lista_borrar_primero(lista_logs);
+		heap_encolar(heap_logs, log);
 	}
-	
-	size_t cant = 0;
-	char* linea = NULL;
-	ssize_t leidos;
-	
-	while((leidos = getline(&linea, &cant, archivo_particionado) > 0)){
-		if(!heap_encolar(heap_ordenar,linea)){
-			//Creo que debemos usar aca la estructura que contenga todos los datos de cada linea
-			aux = strdup(linea);//Fijate que en el abb nos dijo el correcto que usemos esto , me olvide de corregirlo
-			return NULL;
-			//Tuve muchas dudas de como se usa el metodo 2 , asi que perdi mucho tiempo viendo videos de seguimiento de ordenamiento
-		}
-	}
-
-
-}*/
-/*
-logs_t* pasar_datos(char** linea_actual){
-
-	logs_t* log_nuevo = malloc(sizeof(logs_t));
-
-	if(!log_nuevo) return NULL;
-
-	log_nuevo->ip = strdup(linea_actual[0]);
-	log_nuevo->tiempo = strdup(linea_actual[1]);
-	log_nuevo->metodo = strdup(linea_actual[2]);
-	log_nuevo->url = strdup(linea_actual[3]);
-
-	return log_nuevo;
 }
-*/
+
 void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, size_t tam_limite){
 
 	heap_t* heap_logs = heap_crear(tiempo_cmp);
@@ -180,12 +151,11 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 	}
 
 	FILE* archivo_particionado = crear_archivo_particion("particion", cant_particiones, "w");
-	fprintf(archivo_particionado, "%s", heap_desencolar(heap_logs));
 
 	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
 		char** linea_actual = split(linea, '\t');
 
-		if(tam > (tam_limite/1000)){
+		if(tam > (tam_limite*1000)){//Por lo que debugueé tam va aumentando de a 1 (leidos siempre es 1)
 			fclose(archivo_particionado);
 			(*cant_particiones)++;
 			tam = 0;
@@ -205,9 +175,19 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 			(*cant_particiones)++;
 			tam = 0;
 			archivo_particionado = crear_archivo_particion("particion", cant_particiones, "w");
+			pasar_lista_a_heap(lista_logs, heap_logs);
 		}
 		tam+= leidos;
 	}
+	if(heap_esta_vacio(heap_logs)){
+		pasar_lista_a_heap(lista_logs, heap_logs);
+		while(!heap_esta_vacio(heap_logs)){
+			char** minimo_actual = heap_desencolar(heap_logs);
+			fprintf(archivo_particionado, "%s", join(minimo_actual, '\t'));
+		}
+	}
+
+	fclose(archivo_particionado);
 	free(linea);
 	heap_destruir(heap_logs, NULL);
 	lista_destruir(lista_logs, NULL);
@@ -231,9 +211,88 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_archivo_ordenado, int ta
 
 	return true;
 }
+
+void verificar_ataque_dos(heap_t* heap_dos, lista_t* lista_tiempos, char** linea_actual){
+
+	lista_iter_t* iter1 = lista_iter_crear(lista_tiempos);
+	if(!iter1) return;
+	lista_iter_t* iter2 = lista_iter_crear(lista_tiempos);
+	if(!iter2){
+		lista_iter_destruir(iter1);
+		return;
+	}
+
+	size_t pos = 1;
+
+	while(pos < POSIBLE_DOS){
+		lista_iter_avanzar(iter2);
+		pos++;
+	}
+
+	while(!lista_iter_al_final(iter1) && !lista_iter_al_final(iter2)){
+		char* tiempo1 = lista_iter_ver_actual(iter1);
+		char* tiempo2 = lista_iter_ver_actual(iter2);
+		time_t tiempo_1 = iso8601_to_time(tiempo1);
+		time_t tiempo_2 = iso8601_to_time(tiempo2);
+
+		double diferencia = difftime(tiempo_1, tiempo_2);
+
+		if(diferencia > 2 || diferencia < -2){
+			heap_encolar(heap_dos, linea_actual);
+			lista_iter_destruir(iter1);
+			lista_iter_destruir(iter2);
+			return;
+		}
+	}
+
+	lista_iter_destruir(iter1);
+	lista_iter_destruir(iter2);
+}
+
 bool agregar_archivo(char* nombre_archivo){
 
-	//hash y lista
+	FILE* archivo_actual = fopen(nombre_archivo, "r");
+	if(!archivo_actual) return imprimir_error(nombre_archivo);
+
+	hash_t* hash_logs = hash_crear(NULL);
+	if(!hash_logs){
+		fclose(archivo_actual);
+		return false;
+	}
+
+	heap_t* heap_dos = heap_crear(ip_cmp2);
+	if(!heap_dos){
+		free(hash_logs);
+		fclose(archivo_actual);
+		return false;
+	}
+
+	char* linea = NULL;
+	size_t cant = 0;
+	ssize_t leidos;
+
+	while((leidos = getline(&linea, &cant, archivo_actual)) > 0){
+		char** linea_actual = split(linea, '\t');
+		lista_t* lista_tiempos = hash_obtener(hash_logs, linea_actual[0]);
+
+		if(!lista_tiempos){
+			lista_tiempos = lista_crear();
+			if(!lista_tiempos){
+				free(linea);
+				hash_destruir(hash_logs);
+				fclose(archivo_actual);
+				return false;
+			}
+		}
+		lista_insertar_ultimo(lista_tiempos, linea_actual[1]);
+		if(lista_largo(lista_tiempos) >= POSIBLE_DOS){
+			verificar_ataque_dos(heap_dos, lista_tiempos, linea_actual);
+		}
+		hash_guardar(hash_logs, linea_actual[0], lista_tiempos);
+	}
+
+	fclose(archivo_actual);
+	hash_destruir(hash_logs);
 
 	return true;
 }
@@ -254,6 +313,7 @@ bool imprimir_visitantes(const char* clave, char* desde, char* hasta){
 
 bool ver_visitantes(char* desde, char* hasta, abb_t* visitantes){
 
+	fprintf(stdout, "%s:\n", "Visitantes");
 	abb_in_order(visitantes, imprimir_visitantes, desde, hasta);
 
 	return true;

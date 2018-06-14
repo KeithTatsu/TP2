@@ -12,7 +12,7 @@
  *       0      si  a == b| a == b
  *   mayor a 0  si  a > b | a < b
  */
-typedef int (*cmp_func_t) (const char** a, const char** b);
+typedef int (*cmp_func_t) (char** a, char** b);
 
 
 /* Función de heapsort genérica. Esta función ordena mediante heap_sort
