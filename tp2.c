@@ -16,7 +16,6 @@
 #define AGREGAR_ARCHIVO "agregar_archivo"
 #define VER_VISITANTES "ver_visitantes"
 #define ERROR_EN_COMANDO "Error en comando"
-#define MAX_CANT_REGISTRO 20
 
 typedef struct logs{
 	char* ip;
@@ -31,6 +30,23 @@ time_t iso8601_to_time(const char* iso8601){
 	strptime(iso8601, TIME_FORMAT, &bktime);
 
 	return mktime(&bktime);
+}
+/* nombre: nombre del prefijo del archivo, que puede ser el nombre del archivo original
+   particion: numero de particion a crear
+   Por ejemplo: crear_nombre_particion("access001.log", 7) --> "access001.log_07"
+*/
+char* crear_nombre_particion(const char* nombre, size_t particion) {
+    char* nombre_archivo = malloc(sizeof(char) * (strlen(nombre) + 5));
+    sprintf(nombre_archivo, "%s_%02zu", nombre, particion);
+    return nombre_archivo;
+}
+
+/* Crea el FILE* para la particion, en el modo que sea necesario */ 
+FILE* crear_archivo_particion(const char* nombre, size_t particion, char* modo) {
+    char* nombre_archivo = crear_nombre_particion(nombre, particion);
+    FILE* salida_actual = fopen(nombre_archivo, modo);
+    free(nombre_archivo);
+    return salida_actual;
 }
 
 int comparar_ip(char** IP1, char** IP2, size_t pos){
@@ -66,32 +82,37 @@ bool imprimir_error(char* comando){
 
 	return false;
 }
-
-bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t tam_limite){
-
+/*heap_t* heap_ordenar = heap_crear(ip_cmp);*/
+size_t particionar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t tam_limite){
+ 	/*ojo que tam_limite es en kilobyte y leidos en byte*/
 	FILE* archivo_desordenado = fopen(nombre_archivo, "r");
-
-	if(!archivo_desordenado) return imprimir_error(nombre_archivo);
-
-	char* linea = NULL;
-	size_t cant = 0, cant_linea = 0, cant_particiones = 1;
-	ssize_t leidos;
-	heap_t* heap_ordenar = heap_crear(ip_cmp);
-/*
-	FILE* archivo_particionado = fopen(,"w");
-	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
-		
-		if (cant_linea > MAX_CANT_REGISTRO){
-			nombre_archivo = // Aca seria cuando concatenamos  y no se como pasar de int a char
-			fclose(archivo_particionado);
-			archivo_particionado = fopen(nombre_archivo, "w");
-		}
-		fputs(linea,archivo_particionado);
+	if(!archivo_desordenado){
+		imprimir_error(nombre_archivo);
+		return 0;
 	}
-*/
-	fclose(archivo_desordenado);
+	size_t tam_limite_byte = tam_limite*1000;
+	size_t cant = 0,tam = 0,cant_particiones = 1;
+	char* linea = NULL;
+	ssize_t leidos;
+	FILE* archivo_particionado = crear_archivo_particion(nombre_arhivo_ordenado,cant_particiones,"w");
+	if(!archivo_particionado){
+		imprimir_error(nombre_archivo);
+		return 0;
+	}
+	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
+		if (tam > tam_limite_byte){
+			fclose(archivo_particionado);
+			++cant_particiones;
+			tam = 0;
+			archivo_particionado = crear_archivo_particion(nombre_arhivo_ordenado,cant_particiones,"w");
 
-	return true;
+		}
+		fprintf(archivo_particionado, "%s", linea);
+		tam += leidos;
+	}
+	free(linea);
+	fclose(archivo_desordenado);
+	return cant_particiones;
 }
 
 bool agregar_archivo(char* nombre_archivo){
