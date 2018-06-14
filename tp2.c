@@ -82,25 +82,43 @@ bool imprimir_error(char* comando){
 
 	return false;
 }
-/*heap_t* heap_ordenar = heap_crear(ip_cmp);*/
-size_t particionar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t tam_limite){
+FILE* _ordenar_particio(heap_t* heap,lista_t* lista,){
+
+}
+FILE* ordenar_particion(FILE* archivo_particionado,size_t particion){
+	heap_t* heap_ordenar = heap_crear(ip_cmp);
+	if (!heap_ordenar) return false;
+	lista_t* lista =  lista_crear();
+	if(!lista) return false;
+	
+	size_t cant = 0;
+	char* linea = NULL;
+	ssize_t leidos;
+	
+	while((leidos = getline(&linea, &cant, archivo_particionado) > 0)){
+		if(!heap_encolar(heap_ordenar,linea)){
+			/*Creo que debemos usar aca la estructura que contenga todos los datos de cada linea*/
+			aux = strdup(linea);//Fijate que en el abb nos dijo el correcto que usemos esto , me olvide de corregirlo
+			return NULL;
+			//Tuve muchas dudas de como se usa el metodo 2 , asi que perdi mucho tiempo viendo videos de seguimiento de ordenamiento
+		}
+	}
+
+
+}
+bool ordenar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, size_t tam_limite){
  	/*ojo que tam_limite es en kilobyte y leidos en byte*/
 	FILE* archivo_desordenado = fopen(nombre_archivo, "r");
-	if(!archivo_desordenado){
-		imprimir_error(nombre_archivo);
-		return 0;
-	}
+	if(!archivo_desordenado) return imprimir_error(nombre_archivo);
 	size_t tam_limite_byte = tam_limite*1000;
 	size_t cant = 0,tam = 0,cant_particiones = 1;
 	char* linea = NULL;
 	ssize_t leidos;
-	FILE* archivo_particionado = crear_archivo_particion(nombre_arhivo_ordenado,cant_particiones,"w");
-	if(!archivo_particionado){
-		imprimir_error(nombre_archivo);
-		return 0;
-	}
+	FILE* archivo_particionado = crear_archivo_particion("Archivo_particion_desordenado",cant_particiones,"w");
+	if(!archivo_particionado) return imprimir_error(nombre_archivo);
 	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
 		if (tam > tam_limite_byte){
+			/*ACA llamamos a ordenar particion*/
 			fclose(archivo_particionado);
 			++cant_particiones;
 			tam = 0;
@@ -112,9 +130,8 @@ size_t particionar_archivo(char* nombre_archivo, char* nombre_arhivo_ordenado, s
 	}
 	free(linea);
 	fclose(archivo_desordenado);
-	return cant_particiones;
+	return true;
 }
-
 bool agregar_archivo(char* nombre_archivo){
 
 	//hash y lista
