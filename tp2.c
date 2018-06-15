@@ -262,6 +262,9 @@ void verificar_ataque_dos(heap_t* heap_dos, lista_t* lista_tiempos, char** linea
 
 bool agregar_archivo(char* nombre_archivo, abb_t* visitantes){
 
+	size_t largo = strlen(nombre_archivo);
+	nombre_archivo[largo-1] = '\0';
+
 	FILE* archivo_actual = fopen(nombre_archivo, "r");
 	if(!archivo_actual) return imprimir_error(nombre_archivo);
 
@@ -285,7 +288,7 @@ bool agregar_archivo(char* nombre_archivo, abb_t* visitantes){
 	while((leidos = getline(&linea, &cant, archivo_actual)) > 0){
 		char** linea_actual = split(linea, '\t');
 		lista_t* lista_tiempos = hash_obtener(hash_logs, linea_actual[0]);
-		abb_guardar(visitantes, linea_actual[0], linea);
+		abb_guardar(visitantes, linea_actual[0], NULL);
 
 		if(!lista_tiempos){
 			lista_tiempos = lista_crear();
@@ -367,13 +370,13 @@ void interfaz(int tam_limite){
 	char* linea = NULL;
 	size_t cant = 0;
 	ssize_t leidos;
-	abb_t* visitantes = abb_crear(ip_cmp, free);
+	abb_t* visitantes = abb_crear(ip_cmp, NULL);
 
 	if(!visitantes) return;
 
 	while((leidos = getline(&linea, &cant, stdin) > 0)){
 
-		linea[cant-1] = '\0';
+//		linea[cant-1] = '\0';
 		char** comando = split(linea, ' ');
 		if(comando[0]){
 			if(!comparar_comando(comando, tam_limite, visitantes)){
