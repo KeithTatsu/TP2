@@ -18,15 +18,6 @@
 #define ERROR_EN_COMANDO "Error en comando"
 #define CANT_MAX_LOGS 30
 #define POSIBLE_DOS 5
-/*
-typedef struct logs{
-	char* ip;
-	char* tiempo;
-	char* metodo;
-	char* url;
-}logs_t; //NOMBRE SUJETO A CAMBIO
-*/
-
 
 time_t iso8601_to_time(const char* iso8601){
 
@@ -93,9 +84,9 @@ int ip_cmp(const char* IP1, const char* IP2){
 
 	return cmp;
 }
-int ip_cmp2(char** IP1, char** IP2){
+int linea_cmp(char** IP1, char** IP2){
 
-	return ip_cmp(IP1[0], IP2[0]);
+	return ip_cmp(IP2[0], IP1[0]);
 }
 
 int tiempo_cmp(char** LINEA1, char** LINEA2){
@@ -248,16 +239,55 @@ void verificar_ataque_dos(heap_t* heap_dos, lista_t* lista_tiempos, char** linea
 
 		double diferencia = difftime(tiempo_1, tiempo_2);
 
-		if(diferencia > 2 || diferencia < -2){
+		if(diferencia < 2 && diferencia > -2){
 			heap_encolar(heap_dos, linea_actual);
 			lista_iter_destruir(iter1);
 			lista_iter_destruir(iter2);
 			return;
 		}
+		lista_iter_avanzar(iter1);
+		lista_iter_avanzar(iter2);
 	}
 
 	lista_iter_destruir(iter1);
 	lista_iter_destruir(iter2);
+}
+
+void imprimir_atacantes_dos(heap_t* heap_dos){
+
+	while(!heap_esta_vacio(heap_dos)){
+		char** linea_actual = heap_desencolar(heap_dos);
+		fprintf(stdout, "%s: %s\n", "DoS", linea_actual[0]);
+		free_strv(linea_actual);
+	}
+}
+
+void buscar_atacantes_dos(FILE* archivo_actual, hash_t* hash_logs, abb_t* visitantes, heap_t* heap_dos){
+
+	char* linea = NULL;
+	size_t cant = 0;
+	ssize_t leidos;
+
+	while((leidos = getline(&linea, &cant, archivo_actual)) > 0){
+		char** linea_actual = split(linea, '\t');
+		lista_t* lista_tiempos = hash_obtener(hash_logs, linea_actual[0]);
+		abb_guardar(visitantes, linea_actual[0], NULL);
+
+		if(!lista_tiempos){
+			lista_tiempos = lista_crear();
+			if(!lista_tiempos){
+				free(linea);
+				return;
+			}
+		}
+		lista_insertar_ultimo(lista_tiempos, linea_actual[1]);
+		if(lista_largo(lista_tiempos) >= POSIBLE_DOS){
+			verificar_ataque_dos(heap_dos, lista_tiempos, linea_actual);
+		}
+		hash_guardar(hash_logs, linea_actual[0], lista_tiempos);
+	}
+
+	free(linea);
 }
 
 bool agregar_archivo(char* nombre_archivo, abb_t* visitantes){
@@ -274,41 +304,21 @@ bool agregar_archivo(char* nombre_archivo, abb_t* visitantes){
 		return false;
 	}
 
-	heap_t* heap_dos = heap_crear(ip_cmp2);
+	heap_t* heap_dos = heap_crear(linea_cmp);
 	if(!heap_dos){
 		free(hash_logs);
 		fclose(archivo_actual);
 		return false;
 	}
 
-	char* linea = NULL;
-	size_t cant = 0;
-	ssize_t leidos;
+	buscar_atacantes_dos(archivo_actual, hash_logs, visitantes, heap_dos);
 
-	while((leidos = getline(&linea, &cant, archivo_actual)) > 0){
-		char** linea_actual = split(linea, '\t');
-		lista_t* lista_tiempos = hash_obtener(hash_logs, linea_actual[0]);
-		abb_guardar(visitantes, linea_actual[0], NULL);
-
-		if(!lista_tiempos){
-			lista_tiempos = lista_crear();
-			if(!lista_tiempos){
-				free(linea);
-				hash_destruir(hash_logs);
-				fclose(archivo_actual);
-				return false;
-			}
-		}
-		lista_insertar_ultimo(lista_tiempos, linea_actual[1]);
-		if(lista_largo(lista_tiempos) >= POSIBLE_DOS){
-			verificar_ataque_dos(heap_dos, lista_tiempos, linea_actual);
-		}
-		hash_guardar(hash_logs, linea_actual[0], lista_tiempos);
-	}
-
-	free(linea);
 	fclose(archivo_actual);
-	hash_destruir(hash_logs);
+	hash_destruir(hash_logs, free);
+
+	imprimir_atacantes_dos(heap_dos);
+
+	heap_destruir(heap_dos, NULL);
 
 	return true;
 }
