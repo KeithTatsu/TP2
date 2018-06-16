@@ -188,7 +188,6 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 		free(linea_a_escribir);
 	}
 
-
 	fclose(archivo_particionado);
 	free(linea);
 	heap_destruir(heap_logs, NULL);
@@ -314,7 +313,7 @@ bool agregar_archivo(char* nombre_archivo, abb_t* visitantes){
 	buscar_atacantes_dos(archivo_actual, hash_logs, visitantes, heap_dos);
 
 	fclose(archivo_actual);
-	hash_destruir(hash_logs, free);
+	hash_destruir(hash_logs, lista_destruir);
 
 	imprimir_atacantes_dos(heap_dos);
 
