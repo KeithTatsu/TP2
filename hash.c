@@ -294,12 +294,12 @@ size_t hash_cantidad(const hash_t *hash){
 	return hash->ocupados;
 }
 
-void hash_destruir(hash_t *hash){
+void hash_destruir(hash_t *hash, hash_destruir_dato_t destruir_dato){
 
 	for(size_t i = 0; i < hash->tamanio; i++){
 		while(!lista_esta_vacia(hash->tabla[i])){
 			campo_t* campo = lista_borrar_primero(hash->tabla[i]);
-			if(hash->destruir != NULL){
+			if(destruir_dato != NULL){
 				free(campo->dato);
 			}
 			free(campo->clave);

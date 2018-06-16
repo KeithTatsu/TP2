@@ -54,7 +54,7 @@ size_t hash_cantidad(const hash_t *hash);
  * Pre: La estructura hash fue inicializada
  * Post: La estructura hash fue destruida
  */
-void hash_destruir(hash_t *hash);
+void hash_destruir(hash_t *hash, hash_destruir_dato_t destruir_dato);
 
 /* Iterador del hash */
 
