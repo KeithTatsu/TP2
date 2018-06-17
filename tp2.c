@@ -193,11 +193,74 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 	heap_destruir(heap_logs, NULL);
 	lista_destruir(lista_logs, NULL);
 }
+bool k_merge(char* nombre_archivo_ordenado, size_t cant_particiones){
+	heap_t* heap = heap_crear(linea_cmp);
+	if(!heap)return false;
+	abb_t* abb = abb_crear(linea_cmp,fclose);//no se si esto andara
+	if(!abb){
+		free(heap);
+		return false;
+	}
+	size_t i;
+	size_t cant = 0;
+	char* linea = NULL;
+	ssize_t leidos;
+	FILE* arreglo[cant_particiones-1];
+	for (i=0; i <cant_particiones ;i++){
+		arreglo[i]=crear_archivo_particion("particion",i+1,"r");
+		if((leidos = getline(&linea, &cant,arreglo[i]) > 0)){
+			char** linea_actual = split(linea, '\t');
+			if(!abb_guardar(abb,linea_actual,arreglo[i])){
+				abb_destruir(hash,NULL);
+				heap_destruir(free_strv);
+				free_strv(linea_actual);
+				i=0;
+				while(arreglo[i]){
+					fclose(arreglo[i]);
+					i++;
+				}
+				free(linea);
+				return false;
+			if(!heap_encolar(heap,linea_actual)){
+				abb_destruir(hash,NULL);
+				heap_destruir(free_strv);
+				free_strv(linea_actual);
+				i=0;
+				while(arreglo[i]){
+					fclose(arreglo[i]);
+					i++;
+				}
+				free(linea);
+				return false;
+			}
+		}
+		free(linea);//este linea esta bien ??
+	}
+	FILE* archivo_ordenado = fopen(nombre_archivo_ordenado, "w");
+	while(!heap_esta_vacio(heap)){
+		char** linea_actual = heap_desencolar(heap);
+		char* linea_a_escribir = join(linea_actual, '\t');
+		fprintf(archivo_ordenado, "%s", linea_a_escribir);
+		FILE* particion = abb_borrar(abb,linea_actual);//tambien si es null  deberia hacer una eliminar todo
+		free_strv(linea_actual);
+		free(linea_a_escribir);
+		if((leidos = getline(&linea, &cant,particion) > 0)){
+			linea_actual = split(linea, '\t');
+			abb_guardar(abb,linea_actual,particion);
+			heap_encolar(heap,linea_actual);
+		}
 
-void k_merge(char* nombre_archivo_ordenado, size_t cant_particiones){
-
+	}
+	free(linea);//puede causar perdida de memoria , espero que el getline haga free , no importa si son disitnto archivo
+	abb_destruir(abb,NULL);// en teoira deberia estar vacia
+	heap_destruir(free_strv);
+	i=0;
+	while(arreglo[i]){
+		fclose(arreglo[i]);
+		i++;
+	}
+	return true;
 }
-
 bool ordenar_archivo(char* nombre_archivo, char* nombre_archivo_ordenado, int tam_limite){
  	/*ojo que tam_limite es en kilobyte y leidos en byte, 1 kb = 1000 b*/
 	FILE* archivo_desordenado = fopen(nombre_archivo, "r");
