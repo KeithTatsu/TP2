@@ -69,10 +69,10 @@ int comparar_ip(char** ip1, char** ip2, size_t pos){
 		if(strcmp(ip1[pos], ip2[pos]) == 0){
 			return comparar_ip(ip1, ip2, pos+1);
 		}
-		return strcmp(ip1[pos], ip2[pos]);
+		return strcmp(ip2[pos], ip1[pos]);
 	}
 
-	if(len_ip1 < len_ip2) return -1;
+	if(len_ip1 > len_ip2) return -1;
 
 	return 1;
 }
@@ -82,19 +82,12 @@ int ip_cmp(const char* IP1, const char* IP2){
 	char** ip1 = split(IP1, '.');
 	char** ip2 = split(IP2, '.');
 
-	int cmp = comparar_ip(ip1, ip2, 0);
+	int cmp = comparar_ip(ip2, ip1, 0);
 
 	free_strv(ip1);
 	free_strv(ip2);
 
 	return cmp;
-}
-int linea_cmp(void* IP_1, void* IP_2){
-
-	char** IP1 = IP_1;
-	char** IP2 = IP_2;
-
-	return ip_cmp(IP1[0], IP2[0]);
 }
 
 int tiempo_cmp(void* LINEA_1, void* LINEA_2){
@@ -108,15 +101,15 @@ int tiempo_cmp(void* LINEA_1, void* LINEA_2){
 	time_t tiempo1 = iso8601_to_time(linea_1[1]);
 	time_t tiempo2 = iso8601_to_time(linea_2[1]);
 
-	int diferencia = (int)difftime(tiempo1, tiempo2);
+	int diferencia = (int)difftime(tiempo2, tiempo1);
 
-	if(diferencia != 0) diferencia = diferencia*(-1);
+//	if(diferencia != 0) diferencia = diferencia*(-1);
 
 	if(diferencia == 0){
-		diferencia = ip_cmp(linea_1[0], linea_2[0]);
+		diferencia = ip_cmp(linea_2[0], linea_1[0]);
 
 		if(diferencia == 0){
-			diferencia = strcmp(linea_1[3], linea_2[3]);
+			diferencia = strcmp(linea_2[3], linea_1[3]);
 		}
 	}
 	
@@ -151,16 +144,7 @@ void pasar_lista_a_heap(lista_t* lista_logs, heap_t* heap_logs){
 	}
 }
 
-void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, size_t tam_limite){
-
-	heap_t* heap_logs = heap_crear(tiempo_cmp);
-	if(!heap_logs) return;
-
-	lista_t* lista_logs = lista_crear();
-	if(!lista_logs){
-		free(heap_logs);
-		return;
-	}
+void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, size_t tam_limite, heap_t* heap_logs, lista_t* lista_logs){
 
 	size_t cant = 0, tam = 0;
 	char* linea = NULL;
@@ -196,7 +180,7 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 			free(minimo_actual);
 		}else if(lista_largo(lista_logs) == CANT_MAX_LOGS){
 			pasar_lista_a_heap(lista_logs, heap_logs);
-			lista_insertar_ultimo(lista_logs, linea_actual);
+	//		lista_insertar_ultimo(lista_logs, linea_actual);
 			fclose(archivo_particionado);
 			(*cant_particiones)++;
 			tam = 0;
@@ -205,12 +189,13 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 		tam+= cant;
 	}
 
-	fclose(archivo_particionado);
-	(*cant_particiones)++;
-	archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
-
 	pasar_lista_a_heap(lista_logs, heap_logs);
 	while(!heap_esta_vacio(heap_logs)){
+		if(tam > (tam_limite*1000)){
+			fclose(archivo_particionado);
+			(*cant_particiones)++;
+			archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
+		}
 		char* linea_actual = heap_desencolar(heap_logs);
 		fprintf(archivo_particionado, "%s", linea_actual);
 		free(linea_actual);
@@ -218,77 +203,24 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 
 	fclose(archivo_particionado);
 	free(linea);
+}
+
+void procesar_particiones_desordenadas(FILE* archivo_desordenado, size_t* cant_particiones, size_t tam_limite){
+
+	heap_t* heap_logs = heap_crear(tiempo_cmp);
+	if(!heap_logs) return;
+
+	lista_t* lista_logs = lista_crear();
+	if(!lista_logs){
+		free(heap_logs);
+		return;
+	}
+
+	ordenar_particiones(archivo_desordenado, cant_particiones, tam_limite, heap_logs, lista_logs);
+
 	heap_destruir(heap_logs, NULL);
 	lista_destruir(lista_logs, NULL);
-}/*
-bool k_merge(char* nombre_archivo_ordenado, size_t cant_particiones){
-	heap_t* heap = heap_crear(linea_cmp);
-	if(!heap)return false;
-	abb_t* abb = abb_crear(linea_cmp,fclose);//no se si esto andara
-	if(!abb){
-		free(heap);
-		return false;
-	}
-	size_t i;
-	size_t cant = 0;
-	char* linea = NULL;
-	ssize_t leidos;
-	FILE* arreglo[cant_particiones-1];
-	for (i=0; i <cant_particiones ;i++){
-		arreglo[i]=crear_archivo_particion("particion",i+1,"r");
-		if((leidos = getline(&linea, &cant,arreglo[i]) > 0)){
-			char** linea_actual = split(linea, '\t');
-			if(!abb_guardar(abb,linea_actual,arreglo[i])){
-				abb_destruir(hash,NULL);
-				heap_destruir(free_strv);
-				free_strv(linea_actual);
-				i=0;
-				while(arreglo[i]){
-					fclose(arreglo[i]);
-					i++;
-				}
-				free(linea);
-				return false;
-			if(!heap_encolar(heap,linea_actual)){
-				abb_destruir(hash,NULL);
-				heap_destruir(free_strv);
-				free_strv(linea_actual);
-				i=0;
-				while(arreglo[i]){
-					fclose(arreglo[i]);
-					i++;
-				}
-				free(linea);
-				return false;
-			}
-		}
-		free(linea);//este linea esta bien ??
-	}
-	FILE* archivo_ordenado = fopen(nombre_archivo_ordenado, "w");
-	while(!heap_esta_vacio(heap)){
-		char** linea_actual = heap_desencolar(heap);
-		char* linea_a_escribir = join(linea_actual, '\t');
-		fprintf(archivo_ordenado, "%s", linea_a_escribir);
-		FILE* particion = abb_borrar(abb,linea_actual);//tambien si es null  deberia hacer una eliminar todo
-		free_strv(linea_actual);
-		free(linea_a_escribir);
-		if((leidos = getline(&linea, &cant,particion) > 0)){
-			linea_actual = split(linea, '\t');
-			abb_guardar(abb,linea_actual,particion);
-			heap_encolar(heap,linea_actual);
-		}
-
-	}
-	free(linea);//puede causar perdida de memoria , espero que el getline haga free , no importa si son disitnto archivo
-	abb_destruir(abb,NULL);// en teoira deberia estar vacia
-	heap_destruir(free_strv);
-	i=0;
-	while(arreglo[i]){
-		fclose(arreglo[i]);
-		i++;
-	}
-	return true;
-}*/
+}
 
 arch_proce_t* pasar_linea(char* linea, size_t pos){
 
@@ -351,7 +283,7 @@ void k_merge(char* nombre_archivo_ordenado, void** particiones, size_t cant_part
 	fclose(archivo_final);
 }
 
-void procesar_particiones(char* nombre_archivo_ordenado, size_t cant_particiones){
+void procesar_particiones_ordenadas(char* nombre_archivo_ordenado, size_t cant_particiones){
 
 	void** particiones = malloc(cant_particiones*sizeof(void*));
 
@@ -380,8 +312,8 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_archivo_ordenado, int ta
 
 	size_t cant_particiones = 1;
 
-	ordenar_particiones(archivo_desordenado, &cant_particiones, tam_limite);
-	procesar_particiones(nombre_archivo_ordenado, cant_particiones);
+	procesar_particiones_desordenadas(archivo_desordenado, &cant_particiones, tam_limite);
+//	procesar_particiones_ordenadas(nombre_archivo_ordenado, cant_particiones);
 
 	fclose(archivo_desordenado);
 
