@@ -16,7 +16,7 @@
 #define AGREGAR_ARCHIVO "agregar_archivo"
 #define VER_VISITANTES "ver_visitantes"
 #define ERROR_EN_COMANDO "Error en comando"
-#define CANT_MAX_LOGS 30
+#define CANT_MAX_LOGS 30 //Cantidad de lineas que se mantendrán en memoria
 #define POSIBLE_DOS 5
 
 typedef struct arch_procedente{
@@ -46,7 +46,6 @@ char* crear_nombre_particion(const char* nombre, size_t particion){
 	return nombre_archivo;
 }
 
-/* Crea el FILE* para la particion, en el modo que sea necesario */ 
 FILE* crear_archivo_particion(const char* nombre, size_t particion, char* modo){
 
 	char* nombre_archivo = crear_nombre_particion(nombre, particion);
@@ -102,8 +101,6 @@ int tiempo_cmp(void* LINEA_1, void* LINEA_2){
 	time_t tiempo2 = iso8601_to_time(linea_2[1]);
 
 	int diferencia = (int)difftime(tiempo2, tiempo1);
-
-//	if(diferencia != 0) diferencia = diferencia*(-1);
 
 	if(diferencia == 0){
 		diferencia = ip_cmp(linea_2[0], linea_1[0]);
@@ -494,7 +491,6 @@ void interfaz(int tam_limite){
 
 	while((leidos = getline(&linea, &cant, stdin) > 0)){
 
-//		linea[cant-1] = '\0';
 		char** comando = split(linea, ' ');
 		if(comando[0]){
 			if(!comparar_comando(comando, tam_limite, visitantes)){
@@ -519,14 +515,15 @@ void interfaz(int tam_limite){
 int main(int argc, char* argv[]){
 
 	if(argc < 2){
-		fprintf(stderr, "%s", "error"); //CONSULTAR
+		imprimir_error(argv[0]);
 		return -1;
 	}
 
 	int tam_limite = atoi(argv[1]);
 
 	if(tam_limite == 0){
-		//IGUAL A AGRC < 2
+		imprimir_error(argv[1]);
+		return -1;
 	}
 
 	interfaz(tam_limite);
