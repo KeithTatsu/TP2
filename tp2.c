@@ -162,11 +162,14 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
 		char* linea_actual = strdup(linea);
 
-		if(tam > (tam_limite*1000)){
+		if(tam > (tam_limite*1000) || lista_largo(lista_logs) == CANT_MAX_LOGS){
 			fclose(archivo_particionado);
 			(*cant_particiones)++;
 			tam = 0;
 			archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
+			if(lista_largo(lista_logs) == CANT_MAX_LOGS){
+				pasar_lista_a_heap(lista_logs, heap_logs);
+			}
 		}
 		if(!heap_esta_vacio(heap_logs)){
 			char* minimo_actual = heap_desencolar(heap_logs);
@@ -178,13 +181,6 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 			}
 			fprintf(archivo_particionado, "%s", minimo_actual);
 			free(minimo_actual);
-		}else if(lista_largo(lista_logs) == CANT_MAX_LOGS){
-			pasar_lista_a_heap(lista_logs, heap_logs);
-	//		lista_insertar_ultimo(lista_logs, linea_actual);
-			fclose(archivo_particionado);
-			(*cant_particiones)++;
-			tam = 0;
-			archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
 		}
 		tam+= cant;
 	}
@@ -313,7 +309,7 @@ bool ordenar_archivo(char* nombre_archivo, char* nombre_archivo_ordenado, int ta
 	size_t cant_particiones = 1;
 
 	procesar_particiones_desordenadas(archivo_desordenado, &cant_particiones, tam_limite);
-//	procesar_particiones_ordenadas(nombre_archivo_ordenado, cant_particiones);
+	procesar_particiones_ordenadas(nombre_archivo_ordenado, cant_particiones);
 
 	fclose(archivo_desordenado);
 
