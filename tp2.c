@@ -18,6 +18,7 @@
 #define ERROR_EN_COMANDO "Error en comando"
 #define CANT_MAX_LOGS 30 //Cantidad de lineas que se mantendrán en memoria
 #define POSIBLE_DOS 5
+#define NOMBRE_PARTICION "particion"
 
 typedef struct arch_procedente{
 	char* linea;
@@ -154,7 +155,7 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 		}
 	}
 
-	FILE* archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
+	FILE* archivo_particionado = crear_archivo_particion(NOMBRE_PARTICION, (*cant_particiones), "w");
 
 	while((leidos = getline(&linea, &cant, archivo_desordenado) > 0)){
 		char* linea_actual = strdup(linea);
@@ -163,7 +164,7 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 			fclose(archivo_particionado);
 			(*cant_particiones)++;
 			tam = 0;
-			archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
+			archivo_particionado = crear_archivo_particion(NOMBRE_PARTICION, (*cant_particiones), "w");
 			if(lista_largo(lista_logs) == CANT_MAX_LOGS){
 				pasar_lista_a_heap(lista_logs, heap_logs);
 			}
@@ -187,7 +188,7 @@ void ordenar_particiones(FILE* archivo_desordenado, size_t* cant_particiones, si
 		if(tam > (tam_limite*1000)){
 			fclose(archivo_particionado);
 			(*cant_particiones)++;
-			archivo_particionado = crear_archivo_particion("particion", (*cant_particiones), "w");
+			archivo_particionado = crear_archivo_particion(NOMBRE_PARTICION, (*cant_particiones), "w");
 		}
 		char* linea_actual = heap_desencolar(heap_logs);
 		fprintf(archivo_particionado, "%s", linea_actual);
@@ -283,7 +284,7 @@ void procesar_particiones_ordenadas(char* nombre_archivo_ordenado, size_t cant_p
 	if(!particiones) return;
 
 	for(size_t i = 0; i < cant_particiones; i++){
-		particiones[i] = crear_archivo_particion("particion", i+1, "r");
+		particiones[i] = crear_archivo_particion(NOMBRE_PARTICION, i+1, "r");
 	}
 
 	k_merge(nombre_archivo_ordenado, particiones, cant_particiones);
@@ -291,7 +292,7 @@ void procesar_particiones_ordenadas(char* nombre_archivo_ordenado, size_t cant_p
 	for(size_t i = 0; i < cant_particiones; i++){
 		FILE* archivo_actual = particiones[i];
 		fclose(archivo_actual);
-		char* nombre_archivo = crear_nombre_particion("particion", i+1);
+		char* nombre_archivo = crear_nombre_particion(NOMBRE_PARTICION, i+1);
 		remove(nombre_archivo);
 		free(nombre_archivo);
 	}
@@ -301,7 +302,7 @@ void procesar_particiones_ordenadas(char* nombre_archivo_ordenado, size_t cant_p
 bool ordenar_archivo(char* nombre_archivo, char* nombre_archivo_ordenado, int tam_limite){
  	/*ojo que tam_limite es en kilobyte y leidos en byte, 1 kb = 1000 b*/
 	FILE* archivo_desordenado = fopen(nombre_archivo, "r");
-	if(!archivo_desordenado) return imprimir_error(nombre_archivo);
+	if(!archivo_desordenado) return false;
 
 	size_t cant_particiones = 1;
 
@@ -323,11 +324,24 @@ void verificar_ataque_dos(abb_t* abb_dos, lista_t* lista_tiempos, char* ip_actua
 		return;
 	}
 
-	size_t pos = 1;
-
-	while(pos < POSIBLE_DOS){
+	for(size_t i = 0; i < POSIBLE_DOS-1; i++){
+		char* linea_anterior = lista_iter_ver_actual(iter2);
+		char** recurso_anterior = split(linea_anterior, '\t');
 		lista_iter_avanzar(iter2);
-		pos++;
+		char* linea_actual = lista_iter_ver_actual(iter2);
+		char** recurso_actual = split(linea_actual, '\t');
+
+		if(strcmp(recurso_anterior[3], recurso_actual[3]) != 0){
+			lista_iter_destruir(iter1);
+			lista_iter_destruir(iter2);
+			char* linea = lista_borrar_primero(lista_tiempos);
+			free(linea);
+			free_strv(recurso_anterior);
+			free_strv(recurso_actual);
+			return;
+		}
+		free_strv(recurso_anterior);
+		free_strv(recurso_actual);
 	}
 
 	while(!lista_iter_al_final(iter1) && !lista_iter_al_final(iter2)){
@@ -401,7 +415,7 @@ bool agregar_archivo(char* nombre_archivo, abb_t* visitantes){
 	nombre_archivo[largo-1] = '\0';
 
 	FILE* archivo_actual = fopen(nombre_archivo, "r");
-	if(!archivo_actual) return imprimir_error(nombre_archivo);
+	if(!archivo_actual) return false;
 
 	hash_t* hash_logs = hash_crear(NULL);
 	if(!hash_logs){
